@@ -17,4 +17,12 @@ The first time the script is run, it will generate a file called **ids.txt** whi
 
 Every subsequent time it is run, it will only show the newest deals.
 
+## Telegram Notifications
+
+1. Create a Telegram Bot (chat to BotFather on Telegram - /newbot)
+2. Create a Public Telegram Channel
+3. Make your Bot an Admin of the Telegram Channel
+4. Get your Access Token from Bot Father and use the Channel Name to replace the INSERT_HERE in odo.py
+
+
 
