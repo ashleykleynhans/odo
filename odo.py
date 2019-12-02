@@ -52,7 +52,7 @@ def get_ids():
 
 
 def get_products(html):
-    if html == '':
+    if html == None:
         print('ERROR: HTML From OneDayOnly website is empty')
         return
 
