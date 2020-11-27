@@ -15,7 +15,7 @@ url = 'https://www.onedayonly.co.za/'
 def get_deals():
     headers = {
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-        #'accept-encoding': 'gzip, deflate, br',
+        'accept-encoding': 'gzip, deflater',
         'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
         'cache-control': 'no-cache',
         'pragma': 'no-cache',
@@ -30,15 +30,14 @@ def get_deals():
         r = requests.get(url, timeout=5.0, headers=headers)
 
         if r.status_code == 200:
-            content_encoding = r.headers['content-encoding']
+            content_encoding = r.headers['Content-Encoding']
             content_raw  = r.text
 
-            if 'gzip' in content_encoding:
-                html = gzip.GzipFile(fileobj=StringIO(content_raw)).read()
-            else:
-                html = content_raw
+            #if 'gzip' in content_encoding:
+            #    html = gzip.GzipFile(fileobj=StringIO(content_raw)).read()
+            #else:
+            html = content_raw
 
-            print('html', html)
             return html
 
         else:
@@ -72,30 +71,33 @@ def get_products(html):
     for item in products:
         id  = PyQuery(item)
         id = id('.measure-this').attr('id')
-        print(id)
 
         name = PyQuery(item)
         a = name.find('a')
         product_url = url[:-1] + a.attr('href')
-        pprint(product_url)
         data = a.find('h2')
         info = data.contents()
 
         brand = info[0].strip()
-        name = info[1].strip()
-        retail = info[2].strip()
+        product  = info[1].strip()
+        description = info[2].strip()
         selling = info[3].strip()
-        print(name, retail, selling)
 
+        retail = ''
+
+        if len(info) == 5:
+            retail = info[4].strip()
+
+        #print(brand, product, description, selling, retail)
 
         # Specify that we are only interested in values with a selling price of R0
         if selling == 'R0' and id not in get_ids():
-            print('here')
             msg = f"ID: {id}\n"
-            msg += f"Name: {name}\n"
-            msg += f"Retail: {retail}\n"
+            msg += f"Product: {product}\n"
+            msg += f"Description: {description}\n"
             msg += f"Selling: {selling}\n"
-            msg += f"URL: {url}\n"
+            msg += f"Retail: {retail}\n"
+            msg += f"URL: {product_url}\n"
 
             print(f"Found deal: {name}")
             print(f"Sending Telegram Notification for: {name}")
