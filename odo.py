@@ -1,18 +1,21 @@
-#!/usr/local/bin/python3.7
-
 import time
 from datetime import datetime
 import schedule
 import requests
 import re
 from pyquery import PyQuery
+import sys
+import gzip
+from io import StringIO
+from pprint import pprint
+
+url = 'https://www.onedayonly.co.za/'
 
 
 def get_deals():
-
     headers = {
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-        'accept-encoding': 'gzip, deflate, br',
+        #'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
         'cache-control': 'no-cache',
         'pragma': 'no-cache',
@@ -23,20 +26,27 @@ def get_deals():
         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36'
     }
 
-    url = 'https://www.onedayonly.co.za/'
-
     try:
         r = requests.get(url, timeout=5.0, headers=headers)
 
         if r.status_code == 200:
-            html = r.text
+            content_encoding = r.headers['content-encoding']
+            content_raw  = r.text
+
+            if 'gzip' in content_encoding:
+                html = gzip.GzipFile(fileobj=StringIO(content_raw)).read()
+            else:
+                html = content_raw
+
+            print('html', html)
             return html
 
         else:
-            print(f"ERROR: Something went wrong (Status code: {r.status_code}")
+            print(f"ERROR: Something went wrong (Status code: {r.status_code})")
 
     except:
         print('ERROR: Could not get data')
+        return
 
 
 def get_ids():
@@ -56,37 +66,31 @@ def get_products(html):
         print('ERROR: HTML From OneDayOnly website is empty')
         return
 
-    ids = get_ids()
     pq = PyQuery(html)
-    products = pq('div.product_block')
+    products = pq('.measure-this')
 
     for item in products:
         id  = PyQuery(item)
-        id = id('.new_product_block_anchor').attr('id')
+        id = id('.measure-this').attr('id')
+        print(id)
 
         name = PyQuery(item)
-        name = name('.name').text()
-        name = name.strip()
+        a = name.find('a')
+        product_url = url[:-1] + a.attr('href')
+        pprint(product_url)
+        data = a.find('h2')
+        info = data.contents()
 
-        retail = PyQuery(item)
-        retail = retail('.retail').text()
-        retail = retail.strip()
-        m = re.match(r"^Retail: (.+)", retail)
+        brand = info[0].strip()
+        name = info[1].strip()
+        retail = info[2].strip()
+        selling = info[3].strip()
+        print(name, retail, selling)
 
-        if m is not None:
-            retail = m.group(1)
-        else:
-            retail = '-'
-
-        selling = PyQuery(item)
-        selling = selling('.selling').text()
-        selling = selling.strip()
-
-        url = PyQuery(item)
-        url = url('a.new_product_block').closest('a').attr('href')
 
         # Specify that we are only interested in values with a selling price of R0
-        if selling == 'R0' and id not in ids:
+        if selling == 'R0' and id not in get_ids():
+            print('here')
             msg = f"ID: {id}\n"
             msg += f"Name: {name}\n"
             msg += f"Retail: {retail}\n"
@@ -129,8 +133,8 @@ def run():
     scrape()
 
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+       schedule.run_pending()
+       time.sleep(1)
 
 
 run()
